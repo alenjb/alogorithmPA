@@ -1,4 +1,4 @@
-#include<stdio.h>
+#include <stdio.h>
 #include <string.h>
 #define MAX_LINE_LENGTH 1000
 
@@ -389,16 +389,38 @@ void lineControl(char line[], int isAnnotation){
         // ;가 없으면
         else{
             printf(";없음\n");
+            int startPri =0; //기본형으로 시작하는지 여부 0이면 아니고 1이면 맞음
+
+            if(line[0] == '#'){// #include나 #define의 경우
+                int f;
+                //공백이 아닌 첫 문자를 찾기
+                for(f=1; f<lineLength; f++){
+                    if(line[f]!=' ') break;
+                }
+                if(line[f] == 'i' ){// #include
+                    tokenize("#include");
+                    memmove(line, line+f+7, lineLength-1);//그 뒤부터 시작되게 line을 변경
+                    lineControl(line, -1);
+                }
+                else if(line[f] == 'd'){
+                    tokenize("#define");
+                    memmove(line, line+f+6, lineLength-1);//그 뒤부터 시작되게 line을 변경
+                    lineControl(line, -1);
+ 
+                }
+                return;
+            }
+
             // }하나만으로 이루어져있는지 확인
-            if(lineLength==1 && line[0] == '}'){
+            else if(lineLength==1 && line[0] == '}'){
                 return;
             }
 
             // {로 끝나는지 확인
             else if(line[lineLength-1] == '{'){
-                printf("{ 로 끝남\n");
+                printf("{ 로 끝s\n");
                 line[lineLength-1] == ' ';
-                //isPri 검증
+                //startPri 검증
                 if(//포인턴 때매 strncmp로 함
                     strncmp(token, "void" , 4) == 0 || 
                     strncmp(token, "char" , 4) ==0 ||
@@ -409,13 +431,13 @@ void lineControl(char line[], int isAnnotation){
                     strncmp(token, "double", 6) ==0 ||
                     strncmp(token, "enum", 4) ==0
                     ){
-                    isPri =1;//기본 자료형이다.
+                    startPri =1;//기본 자료형이다.
 //                    tokenize(token);
                     //기본 자료형을 출력                    
          //           fprintf(output_file, "%s\n", token);
                 }
-                //isPri가 1인지 확인 : 함수의 선언인지 확인
-                if(isPri == 1){
+                //startPri가 1인지 확인 : 함수의 선언인지 확인
+                if(startPri == 1){
                     isFirstFunc =1;
                     //콤마가 없으면 : 인자가 없는 함수 선언
                     if(comma ==0){
@@ -443,7 +465,7 @@ void lineControl(char line[], int isAnnotation){
                     }
                 }
                 //isPri가 0인지 확인 : 제어문인지 확인
-                else if (isPri == 0){
+                else if (startPri == 0){
                     //일단 넘어감
                 }
             }
