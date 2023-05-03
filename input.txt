@@ -1,16 +1,1 @@
-#include<stdio.h>
-#include <string.h>
-#define MAX_LINE_LENGTH 1000
-
-//int static annotationStart = 0; // /*를 통해서 주석이 시작하면 1이됨
-char funcTable[100][100];
-char varTable[100][100];
-int static funcTableSize = 0;
-int static varTableSize = 0;
-int static isPri =0;
-int static isFisrtFunc=0;
-int static isFirstString =0;
-int static isAnnotation = -1; //-1이면 아직 확인 안한거, 0이면 확인했는데 아닌거, 1이면 주석인거
-int static longAnnotation =0;
-//long ann 시작하면 1 아니면 0
-//isanno 존재하면 1 없으면 0 모르면 -1
+void tokenize(char *token){
