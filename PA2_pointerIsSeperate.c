@@ -1,31 +1,38 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #define MAX_LINE_LENGTH 1000
+/*
+포인터가 따로 출력된다고 가정한 ver
 
+*/
 //int static annotationStart = 0; // /*를 통해서 주석이 시작하면 1이됨
 char funcTable[100][100];
 char varTable[100][100];
 int static funcTableSize = 0;
 int static varTableSize = 0;
-int static isPri =0;
-int static isFirstFunc=0;
-int static isFirstString =0;
-// 더 먼저 시작한게 더 높은 숫자
+int static isPri =0; //전에 기본 자료형이 나왔는지
+int static isFirstFunc=0; // 이 줄에 함수가 있는지를 line control에서 판단
+int static isFirstString =0; //토크나이즈에서 판별할 때 문자열이 시작되었으면
+// 더 먼저 시작한게 더 높은 숫자(isFirstStringOne과 isFirstStringTwo의 값중 먼저 시작한게 더 높은 값임)
 int static isFirstStringOne =0; //' 로 시작했으면
 int static isFirstStringTwo =0; // "로 시작했으면
 int static wasNumorVar =0; //이전에 숫자나 변수가 나왔으면 1 아니면 0;
-int static isAnnotation = -1; //-1이면 아직 확인 안한거, 0이면 확인했는데 아닌거, 1이면 주석인거
-int static longAnnotation =0;
+int static isAnnotation = -1; //주석인지 확인: -1이면 아직 확인 안한거, 0이면 확인했는데 아닌거, 1이면 주석인거
+int static longAnnotation =0;// "/*"로 시작하는 주석인지 확인: 0이면 아닌거, 1이면 주석인거
 
 //long ann 시작하면 1 아니면 0
 //isanno 존재하면 1 없으면 0 모르면 -1
 
 void tokenize(char *token){
+    
 
     printf("%s 를 토크나이즈 \n", token);
+    // return;
     FILE *output_file = fopen("output.txt", "a");
-    //공백이면
+    //공백이면 리턴하기
     if(strlen(token)==0) return;
+
     //문자열 안에 있는 거면
     if(isFirstString == 1 ){
         if(isFirstStringOne>=1 && isFirstStringTwo>=1){ //둘 다 나왔고 중복해서 나왔으면
@@ -90,46 +97,49 @@ void tokenize(char *token){
         return;
     }
     //기본 자료형이면
-    if(//포인턴 때매 strncmp로 함
-        isPri ==0 &&(
-        strncmp(token, "void" , 4) == 0 || 
-        strncmp(token, "char" , 4) ==0 ||
-        strncmp(token, "short", 5) ==0 ||
-        strncmp(token, "int", 3) ==0 ||
-        strncmp(token, "long", 4) ==0 ||
-        strncmp(token, "float", 5) ==0 ||
-        strncmp(token, "double", 6) ==0 ||
-        strncmp(token, "enum", 4) ==0 ||
-        strncmp(token, "FILE", 4) ==0 ||
-        strncmp(token, "struct", 4) ==0 ||
-        strncmp(token, "typedef", 4) ==0 ||
-        strncmp(token, "union", 4) ==0
-        )){
+    if(
+        strcmp(token, "void") == 0 || 
+        strcmp(token, "char") ==0 ||
+        strcmp(token, "short") ==0 ||
+        strcmp(token, "int") ==0 ||
+        strcmp(token, "long") ==0 ||
+        strcmp(token, "float") ==0 ||
+        strcmp(token, "double") ==0 ||
+        strcmp(token, "enum") ==0 ||
+        strcmp(token, "FILE") ==0 ||
+        strcmp(token, "struct") ==0 ||
+        strcmp(token, "typedef") ==0 ||
+        strcmp(token, "union") ==0
+        ){
             fprintf(output_file, "%s\n", token);
             isPri = 1;
             wasNumorVar =0;
             return;
         }
-    //포인터 변수이면
-    else if(strncmp(token, "*", 1)==0){
-        int p=0; //포인터가 몇개 붙어있는지
-        //포인터 몇개 붙어있는지 찾기
-        for(int i =0; i<strlen(token); i++){
-            if(token[i]=='*') {p=i; break;}
+    //연산자이면
+    if (strcmp(token, "+") == 0 || strcmp(token, "-") == 0 || strcmp(token, "/") == 0 ||
+    strcmp(token, "%") == 0 || strcmp(token, "=") == 0 || strcmp(token, ">") == 0 || strcmp(token, "<") == 0 ||
+    strcmp(token, "!") == 0 || strcmp(token, "&") == 0 || strcmp(token, "|") == 0 || strcmp(token, "^") == 0 ||
+    strcmp(token, "~") == 0) {
+        fprintf(output_file, "%s\n", token);
+        isPri = 0;
+        wasNumorVar =0;
+        return;
+    } else if (strcmp(token, "*") == 0 ) {
+        //포인터 선언인 경우
+        if(isPri==1){
+            fprintf(output_file, "%s\n", token);
+            isPri = 1;
+            wasNumorVar =0;
+            
+        }else{
+            fprintf(output_file, "%s\n", token);
+            isPri = 0;
+            wasNumorVar =0;
         }
-        printf("------------------------------------들어옴 %d \n", p);
-        for(int i=0; i<p; i++){
-            fprintf(output_file, "*"); //포인터 출력
-        }
-        fprintf(output_file, "*\n"); //줄바꿈
-
-        memmove(token, token+p+1, strlen(token)-p);//이제 변수만 카리킴
-        tokenize(token);
-        // fprintf(output_file, "%s\n", "VAR"); //변수 출력
-        // wasNumorVar =1;
-        // isPri = 0;
         return;
     }
+
 
     // unsigned
     else if(strcmp(token, "unsigned")==0){ //unsigned
@@ -174,6 +184,50 @@ void tokenize(char *token){
         }
         
     }
+
+
+    //배열의 경우
+    char *leftArr = strchr(token, '[');
+    char *rightArr = strchr(token, ']');
+    if(leftArr!= NULL && rightArr != NULL){ //[과 ]이 존재하는 경우 = 배열인 경우
+        int leftIndex = leftArr - token; // '['의 인덱스 계산
+        int rightIndex = rightArr - token; // ']'의 인덱스 계산
+        //[의 인덱스가 처음이 아니면: arr[5], arr[5]=
+        if(leftIndex!=0){
+            //앞부분
+            char frontArr[leftIndex];
+            strncpy(frontArr, token, leftIndex);
+            //뒷부분
+            char* substring = (char*)malloc(strlen(token)- leftIndex + 1);
+            strcpy(substring, token + leftIndex);
+            //앞의 부분 토크나이즈
+            tokenize(frontArr);
+            //[부터 다시 토크나이즈
+            tokenize(substring);
+            free(substring);
+            return;
+        }else{ //else:([가 첫번째 인덱스이면)    [5], [5]=5
+
+            isPri =0;
+            wasNumorVar= 1;
+
+            // if 뒤의 인덱스가 있으면:[5]=5
+            if(rightIndex!= strlen(token)-1){
+                char* substring = (char*)malloc(strlen(token)- rightIndex + 1);
+                strcpy(substring, token + rightIndex +1);
+                // ]뒤의 인덱스부터 끝까지를 토크나이즈
+                tokenize(substring);
+                free(substring);
+            }
+            // [다음 인덱스부터 ]전까지 인덱스를 토크나이즈
+            char* frontstring = (char*)malloc(strlen(token) - rightIndex);
+            strncpy(frontstring, token + leftIndex+1, rightIndex- leftIndex-1);
+            tokenize(frontstring);
+            free(frontstring);
+            return;        
+        }
+    }
+
     //함수 선언 OR 변수 선언
     else if(isPri ==1 && *token >='A' && *token <= 'z'){
         wasNumorVar =0;
