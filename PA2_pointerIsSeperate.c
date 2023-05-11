@@ -27,7 +27,7 @@ int static longAnnotation =0;// "/*"로 시작하는 주석인지 확인: 0이�
 void tokenize(char *token){
     
 
-    printf("%s 를 토크나이즈 \n", token);
+    printf("---%s 를 토크나이즈 \n", token);
     // return;
     FILE *output_file = fopen("output.txt", "a");
     //공백이면 리턴하기
@@ -117,13 +117,44 @@ void tokenize(char *token){
             return;
         }
     //연산자이면
-    if (strcmp(token, "+") == 0 || strcmp(token, "-") == 0 || strcmp(token, "/") == 0 ||
+
+    if(strcmp(token, "+") == 0 || strcmp(token, "-") == 0 || strcmp(token, "*") == 0 || strcmp(token, "/") == 0 ||
     strcmp(token, "%") == 0 || strcmp(token, "=") == 0 || strcmp(token, ">") == 0 || strcmp(token, "<") == 0 ||
     strcmp(token, "!") == 0 || strcmp(token, "&") == 0 || strcmp(token, "|") == 0 || strcmp(token, "^") == 0 ||
-    strcmp(token, "~") == 0) {
+    strcmp(token, "~") == 0){
         fprintf(output_file, "%s\n", token);
+        return;
+    }
+    int opidx = -1; //토큰에서 연산자의 위치
+    //연산자의 위치를 찾기
+    for (int i = 0; i < strlen(token); i++) {
+        char* specialChar = strchr("+-*%/=><!&|^~", token[i]);
+        if(specialChar != NULL) {
+            opidx = i; 
+            break;
+        }
+    }
+    if(opidx!= -1){ //연산자가 존재하면
+        if(opidx!=0){ //연산자 전에 무언가가 있으면
+            char* substring = (char*)malloc(opidx);
+            strncpy(substring, token, opidx);
+            substring[opidx] = '\0';
+            tokenize(substring);
+        }
         isPri = 0;
         wasNumorVar =0;
+        char * op = (char*)malloc(2);
+        strncpy(op, &token[opidx], 1);
+        op[1] = '\0';
+        tokenize(op);
+        free(op);
+        // fprintf(output_file, "%c\n", token[opidx]);//연산자 출력
+        if(strlen(token)> opidx+1){//연산자 뒤에 무언가가 있으면
+            char* substring = (char*)malloc(strlen(token)- opidx + 1);
+            strcpy(substring, token + opidx +1);
+            tokenize(substring);
+            free(substring);
+        }
         return;
     } else if (strcmp(token, "*") == 0 ) {
         //포인터 선언인 경우
@@ -195,7 +226,7 @@ void tokenize(char *token){
         //[의 인덱스가 처음이 아니면: arr[5], arr[5]=
         if(leftIndex!=0){
             //앞부분
-            char frontArr[leftIndex];
+            char* frontArr = (char*)malloc(leftIndex+1);
             strncpy(frontArr, token, leftIndex);
             //뒷부분
             char* substring = (char*)malloc(strlen(token)- leftIndex + 1);
@@ -204,6 +235,7 @@ void tokenize(char *token){
             tokenize(frontArr);
             //[부터 다시 토크나이즈
             tokenize(substring);
+            free(frontArr);
             free(substring);
             return;
         }else{ //else:([가 첫번째 인덱스이면)    [5], [5]=5

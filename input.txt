@@ -1,4 +1,2 @@
-int arr[5];
-a = arr [4];
-b=arr[4];
-char k[3];
+int a= v/ 5;
+a=v*4+5;
