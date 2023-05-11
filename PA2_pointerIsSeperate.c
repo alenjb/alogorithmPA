@@ -20,6 +20,8 @@ int static isFirstStringTwo =0; // "로 시작했으면
 int static wasNumorVar =0; //이전에 숫자나 변수가 나왔으면 1 아니면 0;
 int static isAnnotation = -1; //주석인지 확인: -1이면 아직 확인 안한거, 0이면 확인했는데 아닌거, 1이면 주석인거
 int static longAnnotation =0;// "/*"로 시작하는 주석인지 확인: 0이면 아닌거, 1이면 주석인거
+int static wassharp =0;// #만 나왔으면 -1, #define같이 같이 나오면 1 아니면 0
+
 
 //long ann 시작하면 1 아니면 0
 //isanno 존재하면 1 없으면 0 모르면 -1
@@ -27,12 +29,14 @@ int static longAnnotation =0;// "/*"로 시작하는 주석인지 확인: 0이�
 void tokenize(char *token){
     
 
-    printf("---%s 를 토크나이즈 \n", token);
+    printf("---%s 를 토크나이즈 , 길이:  %d\n", token, strlen(token));
     // return;
     FILE *output_file = fopen("output.txt", "a");
     //공백이면 리턴하기
-    if(strlen(token)==0) return;
-
+    if(strlen(token)==0) {
+        return;
+    }
+    
     //문자열 안에 있는 거면
     if(isFirstString == 1 ){
         if(isFirstStringOne>=1 && isFirstStringTwo>=1){ //둘 다 나왔고 중복해서 나왔으면
@@ -98,33 +102,59 @@ void tokenize(char *token){
     }
     //기본 자료형이면
     if(
-        strcmp(token, "void") == 0 || 
-        strcmp(token, "char") ==0 ||
-        strcmp(token, "short") ==0 ||
-        strcmp(token, "int") ==0 ||
-        strcmp(token, "long") ==0 ||
-        strcmp(token, "float") ==0 ||
-        strcmp(token, "double") ==0 ||
-        strcmp(token, "enum") ==0 ||
-        strcmp(token, "FILE") ==0 ||
-        strcmp(token, "struct") ==0 ||
-        strcmp(token, "typedef") ==0 ||
-        strcmp(token, "union") ==0
+        strncmp(token, "void", strlen(token)) == 0 || 
+        strncmp(token, "char", strlen(token)) ==0 ||
+        strncmp(token, "short", strlen(token)) ==0 ||
+        strncmp(token, "int", strlen(token)) ==0 ||
+        strncmp(token, "long", strlen(token)) ==0 ||
+        strncmp(token, "float", strlen(token)) ==0 ||
+        strncmp(token, "double", strlen(token)) ==0 ||
+        strncmp(token, "enum", strlen(token)) ==0 ||
+        strncmp(token, "FILE", strlen(token)) ==0 ||
+        strncmp(token, "struct", strlen(token)) ==0 ||
+        strncmp(token, "typedef", strlen(token)) ==0 ||
+        strncmp(token, "union", strlen(token)) ==0
         ){
             fprintf(output_file, "%s\n", token);
             isPri = 1;
             wasNumorVar =0;
             return;
         }
-    //연산자이면
+    //콤마가 있는 경우
+    char *comma = strchr(token, ',');
+    int commaidx = -1;
+    if(comma!= NULL ){ //,가 존자
+        int commaidx = comma - token; // ,의 인덱스 계산
+        //콤마 앞에 뭐가 있으면
+        if(commaidx>0){
+            char* substring = (char*)malloc(commaidx+1);
+            strncpy(substring, token, commaidx);
+            substring[commaidx] = '\0';
+            tokenize(substring);
+        }
+        //콤마 뒤에 뭐가 있으면
+        if(commaidx+1 < strlen(token)){
+            char* substring = (char*)malloc(strlen(token)- commaidx + 1);
+            strcpy(substring, token + commaidx +1);
+            tokenize(substring);
+        } 
+        return;
+    }
 
-    if(strcmp(token, "+") == 0 || strcmp(token, "-") == 0 || strcmp(token, "*") == 0 || strcmp(token, "/") == 0 ||
-    strcmp(token, "%") == 0 || strcmp(token, "=") == 0 || strcmp(token, ">") == 0 || strcmp(token, "<") == 0 ||
-    strcmp(token, "!") == 0 || strcmp(token, "&") == 0 || strcmp(token, "|") == 0 || strcmp(token, "^") == 0 ||
-    strcmp(token, "~") == 0){
+    //<stdio.h>같은 경우이면
+    if(token[0] == '<' && token[strlen(token)-1] == '>'){
         fprintf(output_file, "%s\n", token);
         return;
     }
+    //단일 연산자이면
+    if(strncmp(token, "+", strlen(token)) == 0 || strncmp(token, "-", strlen(token)) == 0 || strncmp(token, "*", strlen(token)) == 0 || strncmp(token, "/", strlen(token)) == 0 ||
+    strncmp(token, "%", strlen(token)) == 0 || strncmp(token, "=", strlen(token)) == 0 || strncmp(token, ">", strlen(token)) == 0 || strncmp(token, "<", strlen(token)) == 0 ||
+    strncmp(token, "!", strlen(token)) == 0 || strncmp(token, "&", strlen(token)) == 0 || strncmp(token, "|", strlen(token)) == 0 || strncmp(token, "^", strlen(token)) == 0 ||
+    strncmp(token, "~", strlen(token)) == 0){
+        fprintf(output_file, "%s\n", token);
+        return;
+    }
+    //연산자가 포함되어 있으면
     int opidx = -1; //토큰에서 연산자의 위치
     //연산자의 위치를 찾기
     for (int i = 0; i < strlen(token); i++) {
@@ -136,7 +166,7 @@ void tokenize(char *token){
     }
     if(opidx!= -1){ //연산자가 존재하면
         if(opidx!=0){ //연산자 전에 무언가가 있으면
-            char* substring = (char*)malloc(opidx);
+            char* substring = (char*)malloc(opidx+1);
             strncpy(substring, token, opidx);
             substring[opidx] = '\0';
             tokenize(substring);
@@ -147,39 +177,24 @@ void tokenize(char *token){
         strncpy(op, &token[opidx], 1);
         op[1] = '\0';
         tokenize(op);
-        free(op);
         // fprintf(output_file, "%c\n", token[opidx]);//연산자 출력
         if(strlen(token)> opidx+1){//연산자 뒤에 무언가가 있으면
             char* substring = (char*)malloc(strlen(token)- opidx + 1);
             strcpy(substring, token + opidx +1);
             tokenize(substring);
-            free(substring);
-        }
-        return;
-    } else if (strcmp(token, "*") == 0 ) {
-        //포인터 선언인 경우
-        if(isPri==1){
-            fprintf(output_file, "%s\n", token);
-            isPri = 1;
-            wasNumorVar =0;
-            
-        }else{
-            fprintf(output_file, "%s\n", token);
-            isPri = 0;
-            wasNumorVar =0;
         }
         return;
     }
 
 
     // unsigned
-    else if(strcmp(token, "unsigned")==0){ //unsigned
+    else if(strncmp(token, "unsigned", strlen(token))==0){ //unsigned
         fprintf(output_file, "%s ", token); //줄바꿈 안하고 출력
         wasNumorVar =0;
         return;
     }
     //static
-    else if(strcmp(token, "static")==0){ //static
+    else if(strncmp(token, "static", strlen(token))==0){ //static
         fprintf(output_file, "%s\n", token); //그대로 출력
         wasNumorVar =0;
         return;
@@ -228,34 +243,36 @@ void tokenize(char *token){
             //앞부분
             char* frontArr = (char*)malloc(leftIndex+1);
             strncpy(frontArr, token, leftIndex);
+            frontArr[leftIndex] = '\0';
             //뒷부분
             char* substring = (char*)malloc(strlen(token)- leftIndex + 1);
             strcpy(substring, token + leftIndex);
+            substring[strlen(token)- leftIndex] = '\0';
             //앞의 부분 토크나이즈
             tokenize(frontArr);
             //[부터 다시 토크나이즈
             tokenize(substring);
-            free(frontArr);
-            free(substring);
             return;
         }else{ //else:([가 첫번째 인덱스이면)    [5], [5]=5
 
             isPri =0;
             wasNumorVar= 1;
 
-            // if 뒤의 인덱스가 있으면:[5]=5
+            // 뒤의 인덱스가 있으면:[5]=5
             if(rightIndex!= strlen(token)-1){
                 char* substring = (char*)malloc(strlen(token)- rightIndex + 1);
                 strcpy(substring, token + rightIndex +1);
+                substring[strlen(token)- rightIndex] = '\0';
+
                 // ]뒤의 인덱스부터 끝까지를 토크나이즈
                 tokenize(substring);
-                free(substring);
             }
             // [다음 인덱스부터 ]전까지 인덱스를 토크나이즈
-            char* frontstring = (char*)malloc(strlen(token) - rightIndex);
+        
+            char* frontstring = (char*)malloc(rightIndex);
             strncpy(frontstring, token + leftIndex+1, rightIndex- leftIndex-1);
+            frontstring[rightIndex] = '\0';
             tokenize(frontstring);
-            free(frontstring);
             return;        
         }
     }
@@ -291,7 +308,7 @@ void tokenize(char *token){
         wasNumorVar =0;
         // 이미 선언된 함수 이면
         for (int i = 0; i <funcTableSize; i++) {
-            if (strcmp(funcTable[i], token) == 0) {
+            if (strncmp(funcTable[i], token, strlen(funcTable[i])) == 0) {
                 //함수 명에 있을 때
                 fprintf(output_file, "%s\n", "FUNC");
                 isPri = 0;
@@ -301,7 +318,7 @@ void tokenize(char *token){
 
         // 이미 선언된 변수 이면
         for (int i = 0; i < varTableSize; i++) {
-            if (strcmp(varTable[i], token) == 0) {
+            if (strncmp(varTable[i], token, strlen(varTable[i])) == 0) {
                 //변수 명에 있을 때
                 fprintf(output_file, "%s\n", "VAR");
                 wasNumorVar =1;
@@ -314,6 +331,21 @@ void tokenize(char *token){
             wasNumorVar =0;
             return;
         }
+        //# 다음에 나온거면
+        if(wassharp ==-1){
+            fprintf(output_file, "%s\n", token);
+            wasNumorVar =0;
+            wassharp =1;
+            return;            
+        }
+        //#define 다음에 나온거면
+        if(wassharp ==1){
+            fprintf(output_file, "%s\n", "VAR");
+            wasNumorVar =0;
+            wassharp =0;
+            return;            
+        }
+
         //기타
         fprintf(output_file, "%s\n", token);
         wasNumorVar =0;
@@ -333,144 +365,24 @@ void tokenize(char *token){
         wasNumorVar =0;
         return;
     }
-    //산술 연산자, 증감연산자, +=, -=, *-, /=이  껴있으면 (%따로 다루기)
-    else if (*token == '+' || *token == '-' || *token == '*' || *token == '/') {
-        int tokenLen = strlen(token);
+    //# define, # include 등
+    else if(token[0]=='#'){
+        // # 단독일 때
+        if(strlen(token) ==1 ){
+            fprintf(output_file, "%s\n", token);
+            wasNumorVar =0;
+            isPri =0;
+            wassharp = -1;
+        }
+        else{ //#define 처럼 붙어서 나왔을 때
+            fprintf(output_file, "%s\n", token);
+            wasNumorVar =0;
+            isPri =0;
+            wassharp =1;
+        }
+        return;
         
-
-        if(tokenLen ==1){ //연산자만 들어오면
-            if(wasNumorVar ==1){// 전에 숫자나 문자가 나온 경우 연산자 이므로
-                fprintf(output_file, "%s\n", token );
-                wasNumorVar =0;
-            }
-            else if (wasNumorVar ==0 && ((*token == '+')|| (*token == '-'))){ //음수나 양수를 표현하기 위한 것
-                fprintf(output_file, "%s", token );
-                wasNumorVar =0;
-            }
-            
-            return;
-        }
-        else{ //연산자랑 무언가가 붙어있으면
-            // +이면
-            if(*token =='+'){
-                if(*(token + 1) == '+'){//++일 때
-                fprintf(output_file, "++\n" );
-                memmove(token, token+2, tokenLen);
-                tokenize(token);
-                wasNumorVar =0;
-                return;
-                }
-                else if(*(token + 1) == '='){//+=일 때
-                fprintf(output_file, "+=\n" );
-                memmove(token, token+2, tokenLen);
-                tokenize(token);
-                wasNumorVar =0;
-                return;
-                }
-                //+랑 뭔가가 붙어있으면 55 +34 , +34
-                else{
-                    if(wasNumorVar ==1){// 전에 숫자나 문자가 나온 경우 연산자 이므로
-                    fprintf(output_file, "+\n");
-                    wasNumorVar =0;
-                    memmove(token, token+1, tokenLen);
-                    tokenize(token);
-                    return;
-                    }
-                    else if (wasNumorVar ==0 && *token == '+'){ //양수를 표현하기 위한 것
-                        fprintf(output_file, "+");
-                        wasNumorVar =0;
-                        memmove(token, token+1, tokenLen);
-                        tokenize(token);
-                        return;
-                    }
-                }
-            }
-            //-이면
-            else if(*token =='-'){
-                
-                if(*(token + 1) == '-'){//--일 때
-                fprintf(output_file, "--\n" );
-                memmove(token, token+2, tokenLen);
-                tokenize(token);
-                wasNumorVar =0;
-                return;
-                }
-                else if(*(token + 1) == '='){//-=일 때
-                fprintf(output_file, "-=\n" );
-                memmove(token, token+2, tokenLen);
-                tokenize(token);
-                wasNumorVar =0;
-                return;
-                }
-                //-랑 뭔가가 붙어있으면
-                else{
-                    if(wasNumorVar ==1){// 전에 숫자나 문자가 나온 경우 연산자 이므로
-                        fprintf(output_file, "-\n");
-                        wasNumorVar =0;
-                        memmove(token, token+1, tokenLen);
-                        tokenize(token);
-                        return;
-                    }
-                    else if (wasNumorVar ==0 && *token == '-'){ //음수를 표현하기 위한 것
-                        fprintf(output_file, "-");
-                        wasNumorVar =0;
-                        memmove(token, token+1, tokenLen);
-                        tokenize(token);
-                        return;
-                    }                    
-                }
-            }
-            // *=이면
-            else if(*token =='*' && *(token + 1) == '='){
-                fprintf(output_file, "*=\n" );
-                memmove(token, token+2, tokenLen);
-                wasNumorVar =0;
-                }
-            // /=이면
-            else if(*token =='/' && *(token + 1) == '='){
-                fprintf(output_file, "/=\n" );
-                memmove(token, token+2, tokenLen);
-                wasNumorVar =0;
-                }
-            //*와 붙어있으면
-            else if(*token =='*'){
-                fprintf(output_file, "*\n" );
-                memmove(token, token+1, tokenLen);
-                tokenize(token);
-                wasNumorVar =0;
-                return;
-            }
-            // /와 붙어있으면
-            else if(*token =='/'){
-                fprintf(output_file, "/\n" );
-                memmove(token, token+1, tokenLen);
-                tokenize(token);
-                wasNumorVar =0;
-                return;
-            }
-            
-            return;
-
-        }
-
-
     }
-    //대입 연산자가 껴있으면
-    else if (*token == '=') {
-        int tokenLen = strlen(token);
-        wasNumorVar =0;
-        if(tokenLen ==1){ //= 하나이면
-            fprintf(output_file, "=\n");
-            return;
-        }else{//=뒤에 뭔가 붙어있으면
-           fprintf(output_file, "=\n" );
-            memmove(token, token+1, tokenLen);
-            tokenize(token);
-            return; 
-        }
-    }
-    //콤마이면
-    
     else{
         fprintf(output_file, "%s\n", token);
         printf("%s 를 적음\n", token);
@@ -486,9 +398,9 @@ void lineControl(char line[], int isAnnotation){
     int semicolon =0;
     int comma =0;
 
-    if(isAnnotation == 0 || isAnnotation == -1){ //만약 주석이 아니거나 존재하는지 모르면 short와 long은 0으로 초기화
-        longAnnotation =0;
-    }
+    // if(isAnnotation == 0 || isAnnotation == -1){ //만약 주석이 아니거나 존재하는지 모르면 short와 long은 0으로 초기화
+    //     longAnnotation =0;
+    // }
     
     //한 줄의 길이 찾기 및 세미콜론, 콤마 찾기
     for(int i=0; i<strlen(line); i++){
@@ -514,16 +426,28 @@ void lineControl(char line[], int isAnnotation){
     if(longAnnotation ==1){ // /*를 통해서 주석이 시작되었으면
         for(int i=0 ; i<lineLength; i++){
             if(line[i] == '*' && line[i+1] == '/'){ // */를 찾으면
+                if(lineLength == i+2){// /*만 있는 줄이면
+                    longAnnotation =0;
+                    return;
+                }
+                
                  memmove(line, line+i+2, lineLength-i-1);//그 뒤부터 시작되게 line을 변경
+                 longAnnotation =0;
+                 printf("바뀐 line: %s 길이 %d\n", line, strlen(line));
                  lineControl(line, -1); //바뀐 라인을 다시 컨트롤
                  return;
             }
         }
-        if (longAnnotation == 1) return; //아직 주석 끝이 안나왔으면
+        // */을 못찾았으면
+        printf("lonass : %d\n", longAnnotation);
+        return;
     }
 
     //아직 주석인지 확인을 안했으면
     else if(isAnnotation == -1){
+        printf("~~~~~~~~~~~~~~~line: %s  %d\n", line, longAnnotation);
+        //아직 주석이 안끝났으면
+        if(longAnnotation == 1) return;
         for(int i=0 ; i<lineLength; i++){
             if(line[i] == '/'){
                 if(line[0] == '/' && line[1] == '/'){ // //로 시작하는 주석만있는 줄이면 
@@ -555,20 +479,6 @@ void lineControl(char line[], int isAnnotation){
             //공백으로 자르기
             token = strtok(line, " ");
             while (token != NULL) {
-                //포인터가 앞에 붙어있는지 확인
-                if(token[0] == '*'){
-                    int p=0; //포인터가 몇개 붙어있는지
-                    //포인터 몇개 붙어있는지 찾기
-                    for(int i =0; i<strlen(token); i++){
-                        if(token[i]=='*') {p=i; break;}
-                    }
-                    //포인터 기호만 가리킬 변수
-                    char * ptr = token;
-                    memmove(ptr, ptr, p-1);//포인터 개수만큼 가리킴
-                    tokenize(ptr);
-                    memmove(token, token+p+1, strlen(token)-p);//이제 변수만 카리킴
-                }
-                printf("이 토큰을 토큰화  %s /n", token);
                 //토큰화 하기
                 tokenize(token);
                 //다음 토큰 만들기
@@ -634,20 +544,7 @@ void lineControl(char line[], int isAnnotation){
                     if(comma ==0){
                         //공백으로 나누기
                         token = strtok(line, " ");
-                        while (token != NULL) {
-                            //포인터가 앞에 붙어있는지 확인
-                            if(token[0] == '*'){
-                                int p=0; //포인터가 몇개 붙어있는지
-                                //포인터 몇개 붙어있는지 찾기
-                                for(int i =0; i<strlen(token); i++){
-                                    if(token[i]=='*') {p=i; break;}
-                                }
-                                //포인터 기호만 가리킬 변수
-                                char * ptr = token;
-                                memmove(ptr, ptr, p-1);//포인터 개수만큼 가리킴
-                                tokenize(ptr);
-                                memmove(token, token+p+1, strlen(token)-p);//이제 함수만 카리킴
-                            }                            
+                        while (token != NULL) {                          
                             //토큰화 하기
                             tokenize(token);
                             //다음 토큰 만들기
@@ -660,20 +557,6 @@ void lineControl(char line[], int isAnnotation){
                         //공백으로 나누기
                         token = strtok(line, " ");
                         while (token != NULL) {
-                            //포인터가 앞에 붙어있는지 확인
-                            if(token[0] == '*'){
-                                int p=0; //포인터가 몇개 붙어있는지
-                                //포인터 몇개 붙어있는지 찾기
-                                for(int i =0; i<strlen(token); i++){
-                                    if(token[i]=='*') {p=i; break;}
-                                }
-                                //포인터 기호만 가리킬 변수
-                                char * ptr = token;
-                                memmove(ptr, ptr, p-1);//포인터 개수만큼 가리킴
-                                tokenize(ptr);
-                                int strlens = strlen(token);
-                                memmove(token, token+p+1, strlen(token)-p);//이제 함수만 카리킴
-                            }  
                             //토큰화 하기
                             tokenize(token);
                             //다음 토큰 만들기
@@ -695,19 +578,6 @@ void lineControl(char line[], int isAnnotation){
                 //공백으로 나누기
                 token = strtok(line, " ");
                 while (token != NULL) {
-                    //포인터가 앞에 붙어있는지 확인
-                    if(token[0] == '*'){
-                        int p=0; //포인터가 몇개 붙어있는지
-                        //포인터 몇개 붙어있는지 찾기
-                        for(int i =0; i<strlen(token); i++){
-                            if(token[i]=='*') {p=i; break;}
-                        }
-                        //포인터 기호만 가리킬 변수
-                        char * ptr = token;
-                        memmove(ptr, ptr, p-1);//포인터 개수만큼 가리킴
-                        tokenize(ptr);
-                        memmove(token, token+p+1, strlen(token)-p);//이제 함수만 카리킴
-                    }   
                     //토큰화 하기
                     tokenize(token);
                     //다음 토큰 만들기

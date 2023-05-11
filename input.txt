@@ -1,2 +1,1 @@
-int a= v/ 5;
-a=v*4+5;
+strncpy(op, &token[opidx],);

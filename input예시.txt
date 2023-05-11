@@ -1,0 +1,22 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#define MAX_LINE_LENGTH 1000
+/*
+포인터가 따로 출력된다고 가정한 ver
+
+*/
+//int static annotationStart = 0; // /*를 통해서 주석이 시작하면 1이됨
+char funcTable[100][100];
+char varTable[100][100];
+int static funcTableSize = 0;
+int static varTableSize = 0;
+int static isPri =0; //전에 기본 자료형이 나왔는지
+int static isFirstFunc=0; // 이 줄에 함수가 있는지를 line control에서 판단
+int static isFirstString =0; //토크나이즈에서 판별할 때 문자열이 시작되었으면
+// 더 먼저 시작한게 더 높은 숫자(isFirstStringOne과 isFirstStringTwo의 값중 먼저 시작한게 더 높은 값임)
+int static isFirstStringOne =0; //' 로 시작했으면
+int static isFirstStringTwo =0; // "로 시작했으면
+int static wasNumorVar =0; //이전에 숫자나 변수가 나왔으면 1 아니면 0;
+int static isAnnotation = -1; //주석인지 확인: -1이면 아직 확인 안한거, 0이면 확인했는데 아닌거, 1이면 주석인거
+int static longAnnotation =0;// "/*"로 시작하는 주석인지 확인: 0이면 아닌거, 1이면 주석인거
