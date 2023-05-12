@@ -1,1 +1,16 @@
-strncpy(op, &token[opidx],);
+    for(int i=0; i<strlen(line); i++){
+        if(line[i] == '\n'){
+            line[i]=' '; //줄바꿈 제거
+            break;
+        }
+        else if(line[i] == ';'){
+            semicolon++;
+            line[i] = ' '; 
+        }
+        else if(line[i] == ','){
+            comma ++;
+        }
+        else if(line[i] ==')' || line[i] =='('){
+            line[i] = ' ';
+        }
+    }

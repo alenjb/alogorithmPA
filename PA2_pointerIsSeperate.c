@@ -36,18 +36,40 @@ void tokenize(char *token){
     if(strlen(token)==0) {
         return;
     }
+    //공백제거
+    int nonspace=0;
+    //탭 제거
+    while(token[nonspace]=='\t'){
+        nonspace = nonspace + 1;
+    }
+    if(nonspace!=0) {
+        tokenize(token+nonspace);
+        return;
+        };
+    //공백 제거
+    while(token[nonspace]==' '){
+        nonspace = nonspace + 1;
+    }
+    if(nonspace!=0) {
+        tokenize(token+nonspace);
+        return;
+        };
     
     //문자열 안에 있는 거면
     if(isFirstString == 1 ){
+        printf("%d %d %d", isFirstString, isFirstStringOne, isFirstStringTwo);
         if(isFirstStringOne>=1 && isFirstStringTwo>=1){ //둘 다 나왔고 중복해서 나왔으면
             if(isFirstStringOne > isFirstStringTwo){ // ' " " ' 이런 경우라면 
                 for(int i=0; i<strlen(token); i++){
                     if(token[i] =='\"'){//"를 만나면
                         memmove(token, token+i+1, strlen(token));
+                        isFirstStringTwo =0;
                         tokenize(token);
+                        return;
                     }
                     if(token[i] =='\''){//'를 만나면
                         memmove(token, token+i+1, strlen(token));
+                        isFirstStringOne =0;
                         tokenize(token);
                         return; 
                     }
@@ -57,12 +79,15 @@ void tokenize(char *token){
                 for(int i=0; i<strlen(token); i++){
                     if(token[i] =='\''){//'를 만나면
                         memmove(token, token+i+1, strlen(token));
+                        isFirstStringOne =0;
                         tokenize(token);
                         return; 
                     }
                     if(token[i] =='\"'){//"를 만나면
                         memmove(token, token+i+1, strlen(token));
+                        isFirstStringTwo =0;
                         tokenize(token);
+                        return;
                     }
                 }   
             }
@@ -100,20 +125,21 @@ void tokenize(char *token){
         //시작은 했지만 둘 다 만나지 못하면 무시해야하므로
         return;
     }
+
     //기본 자료형이면
     if(
-        strncmp(token, "void", strlen(token)) == 0 || 
-        strncmp(token, "char", strlen(token)) ==0 ||
-        strncmp(token, "short", strlen(token)) ==0 ||
-        strncmp(token, "int", strlen(token)) ==0 ||
-        strncmp(token, "long", strlen(token)) ==0 ||
-        strncmp(token, "float", strlen(token)) ==0 ||
-        strncmp(token, "double", strlen(token)) ==0 ||
-        strncmp(token, "enum", strlen(token)) ==0 ||
-        strncmp(token, "FILE", strlen(token)) ==0 ||
-        strncmp(token, "struct", strlen(token)) ==0 ||
-        strncmp(token, "typedef", strlen(token)) ==0 ||
-        strncmp(token, "union", strlen(token)) ==0
+        strcmp(token, "void") == 0 || 
+        strcmp(token, "char") == 0 ||
+        strcmp(token, "short") == 0 ||
+        strcmp(token, "int") == 0 ||
+        strcmp(token, "long") == 0 ||
+        strcmp(token, "float") == 0 ||
+        strcmp(token, "double") == 0 ||
+        strcmp(token, "enum") == 0 ||
+        strcmp(token, "FILE") == 0 ||
+        strcmp(token, "struct") == 0 ||
+        strcmp(token, "typedef") == 0 ||
+        strcmp(token, "union") == 0
         ){
             fprintf(output_file, "%s\n", token);
             isPri = 1;
@@ -147,11 +173,13 @@ void tokenize(char *token){
         return;
     }
     //단일 연산자이면
-    if(strncmp(token, "+", strlen(token)) == 0 || strncmp(token, "-", strlen(token)) == 0 || strncmp(token, "*", strlen(token)) == 0 || strncmp(token, "/", strlen(token)) == 0 ||
-    strncmp(token, "%", strlen(token)) == 0 || strncmp(token, "=", strlen(token)) == 0 || strncmp(token, ">", strlen(token)) == 0 || strncmp(token, "<", strlen(token)) == 0 ||
-    strncmp(token, "!", strlen(token)) == 0 || strncmp(token, "&", strlen(token)) == 0 || strncmp(token, "|", strlen(token)) == 0 || strncmp(token, "^", strlen(token)) == 0 ||
-    strncmp(token, "~", strlen(token)) == 0){
+    if(strcmp(token, "+") == 0 || strcmp(token, "-") == 0 || strcmp(token, "*") == 0 || strcmp(token, "/") == 0 ||
+        strcmp(token, "%") == 0 || strcmp(token, "=") == 0 || strcmp(token, ">") == 0 || strcmp(token, "<") == 0 ||
+        strcmp(token, "!") == 0 || strcmp(token, "&") == 0 || strcmp(token, "|") == 0 || strcmp(token, "^") == 0 ||
+        strcmp(token, "~") == 0){
         fprintf(output_file, "%s\n", token);
+        isPri =0;
+        wasNumorVar = 0;
         return;
     }
     //연산자가 포함되어 있으면
@@ -188,13 +216,13 @@ void tokenize(char *token){
 
 
     // unsigned
-    else if(strncmp(token, "unsigned", strlen(token))==0){ //unsigned
+    else if(strcmp(token, "unsigned")==0){ //unsigned
         fprintf(output_file, "%s ", token); //줄바꿈 안하고 출력
         wasNumorVar =0;
         return;
     }
     //static
-    else if(strncmp(token, "static", strlen(token))==0){ //static
+    else if(strcmp(token, "static")==0){ //static
         fprintf(output_file, "%s\n", token); //그대로 출력
         wasNumorVar =0;
         return;
@@ -208,6 +236,29 @@ void tokenize(char *token){
     //String ''
     else if (*token == '\'' ){ // ''
         if(isFirstString ==0 &&isFirstStringOne ==0){ //처음 나온거면
+            //끝나는 '가 있는지 탐색
+            int stridx=-1;
+            for (int i = 1; i < strlen(token); i++) {
+                char* endstr = strchr("\'", token[i]);
+                if(endstr != NULL) { //끝나는 '가 있으면
+                    stridx =i;    
+                    break;
+                }
+            }
+            if(stridx!=-1){//끝나는 '가 있으면
+                fprintf(output_file, "%s\n", "String_LITERAL");
+                wasNumorVar =0;
+                isPri = 0;
+                isFirstStringOne =0;
+                if(stridx!=strlen(token)-1){ //뒤에 뭐가 더 있으면
+                    char* substring = (char*)malloc(strlen(token)- stridx + 1);
+                    strcpy(substring, token + stridx +1);
+                    tokenize(substring);
+                    return;
+                }
+                return;
+            }
+            //끝나는 '가 없으면
             fprintf(output_file, "%s\n", "String_LITERAL");
             wasNumorVar =0;
             isPri = 0;
@@ -220,12 +271,36 @@ void tokenize(char *token){
         //String ""
     else if (*token == '\"'){ //String
         if(isFirstString ==0 && isFirstStringTwo ==0){ //처음 나온거면
+            //끝나는 "가 있는지 탐색
+            int stridx=-1;
+            for (int i = 1; i < strlen(token); i++) {
+                char* endstr = strchr("\"", token[i]);
+                if(endstr != NULL) { //끝나는 "가 있으면
+                    stridx =i;    
+                    break;
+                }
+            }
+            if(stridx!=-1){//끝나는 "가 있으면
+                fprintf(output_file, "%s\n", "String_LITERAL");
+                wasNumorVar =0;
+                isPri = 0;
+                isFirstStringTwo =0;
+                if(stridx!=strlen(token)-1){ //뒤에 뭐가 더 있으면
+                    char* substring = (char*)malloc(strlen(token)- stridx + 1);
+                    strcpy(substring, token + stridx +1);
+                    tokenize(substring);
+                    return;
+                }
+                // "로 끝나면
+                return;
+            }
+            //끝나는 '가 없으면
             fprintf(output_file, "%s\n", "String_LITERAL");
             wasNumorVar =0;
             isPri = 0;
             isFirstString =1;
-            isFirstStringTwo=1;
-            if(isFirstStringOne >0) isFirstStringOne++;  
+            isFirstStringTwo =1;
+            if(isFirstStringOne>0) isFirstStringOne++;   
             return;
         }
         
@@ -247,6 +322,7 @@ void tokenize(char *token){
             //뒷부분
             char* substring = (char*)malloc(strlen(token)- leftIndex + 1);
             strcpy(substring, token + leftIndex);
+            
             substring[strlen(token)- leftIndex] = '\0';
             //앞의 부분 토크나이즈
             tokenize(frontArr);
@@ -262,7 +338,9 @@ void tokenize(char *token){
             if(rightIndex!= strlen(token)-1){
                 char* substring = (char*)malloc(strlen(token)- rightIndex + 1);
                 strcpy(substring, token + rightIndex +1);
+                            printf("전: %d\n", strlen(substring));
                 substring[strlen(token)- rightIndex] = '\0';
+                            printf("후: %d\n", strlen(substring));
 
                 // ]뒤의 인덱스부터 끝까지를 토크나이즈
                 tokenize(substring);
@@ -271,7 +349,7 @@ void tokenize(char *token){
         
             char* frontstring = (char*)malloc(rightIndex);
             strncpy(frontstring, token + leftIndex+1, rightIndex- leftIndex-1);
-            frontstring[rightIndex] = '\0';
+            frontstring[rightIndex- leftIndex-1] = '\0';
             tokenize(frontstring);
             return;        
         }
@@ -308,7 +386,7 @@ void tokenize(char *token){
         wasNumorVar =0;
         // 이미 선언된 함수 이면
         for (int i = 0; i <funcTableSize; i++) {
-            if (strncmp(funcTable[i], token, strlen(funcTable[i])) == 0) {
+            if (strcmp(funcTable[i], token) == 0) {
                 //함수 명에 있을 때
                 fprintf(output_file, "%s\n", "FUNC");
                 isPri = 0;
@@ -318,7 +396,7 @@ void tokenize(char *token){
 
         // 이미 선언된 변수 이면
         for (int i = 0; i < varTableSize; i++) {
-            if (strncmp(varTable[i], token, strlen(varTable[i])) == 0) {
+            if (strcmp(varTable[i], token) == 0) {
                 //변수 명에 있을 때
                 fprintf(output_file, "%s\n", "VAR");
                 wasNumorVar =1;
@@ -567,14 +645,21 @@ void lineControl(char line[], int isAnnotation){
                 }
                 //isPri가 0인지 확인 : 제어문인지 확인
                 else if (startPri == 0){
-
-                    //일단 넘어감
+                        //공백으로 나누기
+                        line[ lineLength-1] = ' ';
+                        token = strtok(line, " ");
+                        while (token != NULL) {
+                            //토큰화 하기
+                            tokenize(token);
+                            //다음 토큰 만들기
+                            token = strtok(NULL, " ");
+                        }
+                        return;
                 }
             }
             //기타 #포함
             else{
                 printf("충격화 공고 %d\n", lineLength);
-                printf("line[lineLength-1]:%c\n",line[lineLength]);
                 //공백으로 나누기
                 token = strtok(line, " ");
                 while (token != NULL) {
